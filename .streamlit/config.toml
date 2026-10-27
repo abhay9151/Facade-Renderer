@@ -1,0 +1,13 @@
+[server]
+maxUploadSize = 10
+headless = true
+
+[theme]
+primaryColor = "#f59e0b"
+backgroundColor = "#0d1117"
+secondaryBackgroundColor = "#161b22"
+textColor = "#e6edf3"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false

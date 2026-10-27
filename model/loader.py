@@ -5,6 +5,42 @@ import torch.nn as nn
 import streamlit as st
 from model.generator import UNetGenerator
 
+# ---------------------------------------------------------------------------
+# GitHub Release URL for the model weights (used for Streamlit Cloud deploy)
+# ---------------------------------------------------------------------------
+MODEL_RELEASE_URL = (
+    "https://github.com/abhay9151/Facade-Renderer/releases/download/v1.0/facade_generator.pkl"
+)
+
+def _download_model(url: str, dest: str):
+    """Download a file from *url* to *dest* with a Streamlit progress bar."""
+    import urllib.request, shutil
+
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    tmp_path = dest + ".part"
+
+    st.info("⬇️ Downloading model weights from GitHub Releases (~208 MB)…")
+    progress_bar = st.progress(0, text="Starting download…")
+
+    def _reporthook(block_num, block_size, total_size):
+        downloaded = block_num * block_size
+        if total_size > 0:
+            pct = min(downloaded / total_size, 1.0)
+            progress_bar.progress(pct, text=f"Downloaded {downloaded / 1e6:.1f} / {total_size / 1e6:.1f} MB")
+
+    try:
+        urllib.request.urlretrieve(url, tmp_path, reporthook=_reporthook)
+        shutil.move(tmp_path, dest)
+        progress_bar.progress(1.0, text="Download complete ✅")
+    except Exception as e:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise RuntimeError(
+            f"Failed to download model from {url}: {e}\n"
+            "Please download 'facade_generator.pkl' manually and place it in the 'model/' directory."
+        )
+
+
 def get_device():
     """Detect available accelerator: CUDA -> Apple Silicon MPS -> CPU."""
     if torch.cuda.is_available():
@@ -17,6 +53,8 @@ def get_device():
 def load_generator_model(model_path="model/facade_generator.pkl"):
     """
     Load Pix2Pix UNetGenerator from pickle checkpoint with caching.
+    If the checkpoint is not found locally, it is automatically downloaded
+    from the GitHub Releases page (for Streamlit Cloud deployment).
     Returns:
         model: UNetGenerator instance on active device
         metadata: dict with training epochs, input_size, test_metrics, etc.
@@ -36,11 +74,11 @@ def load_generator_model(model_path="model/facade_generator.pkl"):
             resolved_path = p
             break
 
+    # Auto-download when running on Streamlit Cloud (model not in repo)
     if not resolved_path:
-        raise FileNotFoundError(
-            f"Model checkpoint not found. Expected at '{model_path}'. "
-            "Please ensure 'facade_generator.pkl' is placed in the 'model/' directory."
-        )
+        default_dest = os.path.join(os.path.dirname(__file__), "facade_generator.pkl")
+        _download_model(MODEL_RELEASE_URL, default_dest)
+        resolved_path = default_dest
 
     try:
         with open(resolved_path, "rb") as f:

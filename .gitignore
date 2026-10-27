@@ -39,9 +39,9 @@ gen_result_*.png
 .coverage
 htmlcov/
 
-# Streamlit
-.streamlit/
+# Streamlit cache (not config — config.toml is tracked for Cloud deployment)
+.streamlit/secrets.toml
 
-# Large model weights — place these manually:
-#   model/facade_generator.pkl  (208 MB — download from release or Google Drive)
+# Large model weights — auto-downloaded from GitHub Releases at runtime
+#   model/facade_generator.pkl  (208 MB)
 *.pkl
